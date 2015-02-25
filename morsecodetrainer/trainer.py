@@ -6,22 +6,24 @@ import time
 import random
 
 from morsecodelib import sound
+import config
 
 
 class Trainer(object):
     def __init__(self):
         self.stopped = False
+        self.elapsed_seconds = 0.0
     
     def run(self):
         start = time.clock()
         morse_sound = sound.MorseSoundPlayer()
-        elapsed = 0.0
-        while elapsed < 60:
+        self.elapsed_seconds = 0.0
+        while self.elapsed_seconds < config.MINUTES_OF_TRAINING*60.0:
             length = random.choice(range(1,7))
             letters = [random.choice(['M','K']) for _i in range(length)]
             word = ''.join(letters)
             morse_sound.text_to_sound(word)
-            elapsed = time.clock() - start
+            self.elapsed_seconds = time.clock() - start
             self.render_correct_answer(word)
             if self.stopped:
                 break

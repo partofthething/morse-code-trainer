@@ -9,6 +9,8 @@ import wx
 import wx.grid
 
 from morsecodetrainer.trainer import Trainer
+from morsecodetrainer import config
+from morsecodelib.config import WORDS_PER_MINUTE
 
 myEVT_NEWWORD = wx.NewEventType()
 EVT_NEWWORD = wx.PyEventBinder(myEVT_NEWWORD, 1)
@@ -61,13 +63,13 @@ class MyFrame(wx.Frame):
         self.SetTitle("Morse Code Trainer")
         self.accuracy.SetForegroundColour(wx.Colour(0, 255, 0))
         self.accuracy.SetFont(wx.Font(25, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, "Ubuntu"))
-        self.morsegrid.CreateGrid(100, 3)
+        self.morsegrid.CreateGrid(int(config.MINUTES_OF_TRAINING * WORDS_PER_MINUTE) + 100 , 3)
         self.morsegrid.SetColLabelValue(0, "You")
         self.morsegrid.SetColLabelValue(1, "Computer")
         self.morsegrid.SetColLabelValue(2, "Accuracy")
         self.statusbar.SetStatusWidths([-1, 100, 100])
         # statusbar fields
-        statusbar_fields = ["Morse Code Trainer", "0:00 / 5:00", "15 WPM"]
+        statusbar_fields = ["Morse Code Trainer", "0:00 / 5:00", "{0} WPM".format(WORDS_PER_MINUTE)]
         for i in range(len(statusbar_fields)):
             self.statusbar.SetStatusText(statusbar_fields[i], i)
         # end wxGlade
