@@ -27,8 +27,8 @@ class MyFrame(wx.Frame):
         self.morse_sound = None
         
         self.panel = wx.Panel(self, wx.ID_ANY)
-        self.level = wx.SpinCtrl(self.panel, wx.ID_ANY, "0", min=1, max=35)
-        self.level_label = wx.StaticText(self.panel, wx.ID_ANY, "Level", style=wx.ALIGN_RIGHT)
+        self.level = wx.SpinCtrl(self.panel, wx.ID_ANY, "2", min=2, max=35)
+        self.level_label = wx.StaticText(self.panel, wx.ID_ANY, "Number of letters", style=wx.ALIGN_RIGHT)
         self.accuracy = wx.StaticText(self.panel, wx.ID_ANY, "Accuracy: 0%")
         self.start = wx.Button(self.panel, wx.ID_ANY, "Start Training Session")
         self.stop = wx.Button(self.panel, wx.ID_ANY, "Stop Training Session")
@@ -57,6 +57,15 @@ class MyFrame(wx.Frame):
         self.__set_properties()
         self.__do_layout()
         # end wxGlade
+        
+        self.timer = wx.Timer(self, wx.ID_ANY)
+        self.Bind(wx.EVT_TIMER, self.on_timer)
+        self.timer.Start(1000)    # 1 second interval
+
+
+    def on_timer(self, event):
+        if self.morse_sound:
+            self.statusbar.SetStatusText("{0}".format(self.morse_sound.trainer.elapsed_seconds), 1)
 
     def __set_properties(self):
         # begin wxGlade: MyFrame.__set_properties
@@ -66,7 +75,7 @@ class MyFrame(wx.Frame):
         self.morsegrid.CreateGrid(int(config.MINUTES_OF_TRAINING * WORDS_PER_MINUTE) + 100 , 3)
         self.morsegrid.SetColLabelValue(0, "You")
         self.morsegrid.SetColLabelValue(1, "Computer")
-        self.morsegrid.SetColLabelValue(2, "Accuracy")
+        self.morsegrid.SetColLabelValue(2, "Accurate")
         self.statusbar.SetStatusWidths([-1, 100, 100])
         # statusbar fields
         statusbar_fields = ["Morse Code Trainer", "0:00 / 5:00", "{0} WPM".format(WORDS_PER_MINUTE)]
@@ -85,7 +94,7 @@ class MyFrame(wx.Frame):
         upper_control_sizer = wx.BoxSizer(wx.HORIZONTAL)
         upper_control_sizer.Add(self.level, 0, 0, 0)
         upper_control_sizer.Add(self.level_label, 0, 0, 0)
-        control_sizer_base.Add(upper_control_sizer, 1, wx.EXPAND, 0)
+        control_sizer_base.Add(upper_control_sizer, 1,  wx.ALIGN_CENTER_HORIZONTAL, 0)
         control_sizer_base.Add(self.accuracy, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
         control_sizer_base.Add(lower_control_sizer, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
         two_main_columns.Add(control_sizer_base, 1, wx.ALIGN_CENTER_VERTICAL, 0)
@@ -103,6 +112,9 @@ class MyFrame(wx.Frame):
         
         Start it in another thread. 
         """
+        self.num_words = 0
+        self.answers = []
+        self.morsegrid.ClearGrid()
         self.morse_sound = SoundThread(self)
         self.morse_sound.start()
         self.morsegrid.SetCellBackgroundColour(0, 0, wx.GREEN)
@@ -114,6 +126,7 @@ class MyFrame(wx.Frame):
 . 
         """
         self.morse_sound.stop()
+        
         
     def on_new_word(self, evt):
         new_word = evt.GetValue()
@@ -129,26 +142,27 @@ class MyFrame(wx.Frame):
         Training is done. Show results
         """
         correct = 0
+        ai = 0
+        self.morsegrid.SetCellBackgroundColour(self.num_words, 0, wx.WHITE)
         for ai,answer in enumerate(self.answers):
             self.morsegrid.SetCellValue(ai, 1, answer)
             user_input = self.morsegrid.GetCellValue(ai, 0)
             if user_input.upper() == answer:
                 correct += 1
                 self.morsegrid.SetCellBackgroundColour(ai, 2, wx.GREEN)
-                self.morsegrid.SetCellValue(ai, 2, '100%')
+                self.morsegrid.SetCellValue(ai, 2, 'Yes!')
                 
             else:
-                self.morsegrid.SetCellValue(ai, 2, '0%')
+                self.morsegrid.SetCellValue(ai, 2, 'no')
                 
         self.accuracy.SetLabel('Accuracy: {0:3.0f}%'.format( correct / float(ai+1) * 100))
-        
-        
-        
+
 class SoundThread(threading.Thread):
     def __init__(self, parent):
         threading.Thread.__init__(self)
         self._parent = parent
         self.trainer = GuiTrainer(parent)
+        self.trainer.set_num_characters(self._parent.level.GetValue())
         
     def run(self):
         self.trainer.run()
