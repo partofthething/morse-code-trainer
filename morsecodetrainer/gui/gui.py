@@ -4,6 +4,9 @@ GUI for Morse Code Trainer
 
 import threading
 import gettext
+import datetime
+import os
+import time
 
 import wx
 import wx.grid
@@ -65,7 +68,7 @@ class MyFrame(wx.Frame):
 
     def on_timer(self, event):
         if self.morse_sound:
-            self.statusbar.SetStatusText("{0}".format(self.morse_sound.trainer.elapsed_seconds), 1)
+            self.statusbar.SetStatusText("{0}".format(datetime.timedelta(seconds=self.morse_sound.trainer.elapsed_seconds)), 1)
 
     def __set_properties(self):
         # begin wxGlade: MyFrame.__set_properties
@@ -115,6 +118,8 @@ class MyFrame(wx.Frame):
         self.num_words = 0
         self.answers = []
         self.morsegrid.ClearGrid()
+        for row in range(int(config.MINUTES_OF_TRAINING * WORDS_PER_MINUTE) + 100):
+            self.morsegrid.SetCellBackgroundColour(row, 2, wx.WHITE)
         self.morse_sound = SoundThread(self)
         self.morse_sound.start()
         self.morsegrid.SetCellBackgroundColour(0, 0, wx.GREEN)
@@ -155,7 +160,23 @@ class MyFrame(wx.Frame):
             else:
                 self.morsegrid.SetCellValue(ai, 2, 'no')
                 
-        self.accuracy.SetLabel('Accuracy: {0:3.0f}%'.format( correct / float(ai+1) * 100))
+        self.accuracy_value =  correct / float(ai+1) * 100
+        self.accuracy.SetLabel('Accuracy: {0:3.0f}%'.format(self.accuracy_value))
+        if self.morse_sound.trainer.full_run_completed:
+            self.log_results()
+            
+    def log_results(self):
+        """
+        Store results so you can see your history
+        """
+        log_directory = os.path.join(os.path.expanduser('~'),'.morescodetrainer')
+        if not os.path.exists(log_directory):
+            os.makedirs(log_directory)
+        fname = os.path.join(log_directory,'accuracy_history.txt')
+        log_file = open(fname,'a')
+        log_file.write('<{0}> {1} {2} {3}\n'.format(time.ctime(), self.morse_sound.trainer.num_characters, 
+                                                  config.MINUTES_OF_TRAINING, self.accuracy_value))
+        log_file.close()
 
 class SoundThread(threading.Thread):
     def __init__(self, parent):
