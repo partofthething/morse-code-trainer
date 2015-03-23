@@ -42,6 +42,8 @@ class MyFrame(wx.Frame):
         self.file = wx.Menu()
         self.settings = wx.MenuItem(self.file, wx.ID_ANY, "Settings", "", wx.ITEM_NORMAL)
         self.file.AppendItem(self.settings)
+        self.plot = wx.MenuItem(self.file, wx.ID_ANY, "Plot history", "", wx.ITEM_NORMAL)
+        self.file.AppendItem(self.plot)
         self.close = wx.MenuItem(self.file, wx.ID_ANY, "Close", "", wx.ITEM_NORMAL)
         self.file.AppendItem(self.close)
         self.menu.Append(self.file, "File")
@@ -52,6 +54,7 @@ class MyFrame(wx.Frame):
         self.SetMenuBar(self.menu)
         # Menu Bar end
         self.statusbar = self.CreateStatusBar(3, 0)
+        self.Bind(wx.EVT_MENU, self.on_plot, self.plot)
 
         self.Bind(wx.EVT_BUTTON, self.on_start, self.start)
         self.Bind(wx.EVT_BUTTON, self.on_stop, self.stop)
@@ -63,8 +66,11 @@ class MyFrame(wx.Frame):
         
         self.timer = wx.Timer(self, wx.ID_ANY)
         self.Bind(wx.EVT_TIMER, self.on_timer)
+        self.morse_sound = SoundThread(self)
         self.timer.Start(1000)    # 1 second interval
 
+    def on_plot(self, event):
+        self.morse_sound.trainer.plot_history()
 
     def on_timer(self, event):
         if self.morse_sound:
@@ -120,7 +126,6 @@ class MyFrame(wx.Frame):
         self.morsegrid.ClearGrid()
         for row in range(int(config.MINUTES_OF_TRAINING * WORDS_PER_MINUTE) + 100):
             self.morsegrid.SetCellBackgroundColour(row, 2, wx.WHITE)
-        self.morse_sound = SoundThread(self)
         self.morse_sound.start()
         self.morsegrid.SetCellBackgroundColour(0, 0, wx.GREEN)
         self.morsegrid.ForceRefresh()
@@ -163,29 +168,18 @@ class MyFrame(wx.Frame):
         self.accuracy_value =  correct / float(ai+1) * 100
         self.accuracy.SetLabel('Accuracy: {0:3.0f}%'.format(self.accuracy_value))
         if self.morse_sound.trainer.full_run_completed:
-            self.log_results()
+            self.morse_sound.trainer.log_results(self.accuracy_value)
             
-    def log_results(self):
-        """
-        Store results so you can see your history
-        """
-        log_directory = os.path.join(os.path.expanduser('~'),'.morescodetrainer')
-        if not os.path.exists(log_directory):
-            os.makedirs(log_directory)
-        fname = os.path.join(log_directory,'accuracy_history.txt')
-        log_file = open(fname,'a')
-        log_file.write('<{0}> {1} {2} {3}\n'.format(time.ctime(), self.morse_sound.trainer.num_characters, 
-                                                  config.MINUTES_OF_TRAINING, self.accuracy_value))
-        log_file.close()
 
 class SoundThread(threading.Thread):
     def __init__(self, parent):
         threading.Thread.__init__(self)
         self._parent = parent
         self.trainer = GuiTrainer(parent)
-        self.trainer.set_num_characters(self._parent.level.GetValue())
+        
         
     def run(self):
+        self.trainer.set_num_characters(self._parent.level.GetValue())
         self.trainer.run()
         self.end_training()
         

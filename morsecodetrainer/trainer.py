@@ -4,6 +4,9 @@ Trains you
 
 import time
 import random
+import os
+import re
+from datetime import datetime
 
 from morsecodelib import sound
 import config
@@ -60,6 +63,72 @@ class Trainer(object):
     def stop(self):
         self.stopped = True
         
+    def log_results(self, accuracy_value):
+        """
+        Store results so you can see your history
+        """
+        with open(self.get_log_file_name(),'a') as log_file:
+            log_file.write('<{0}> {1} {2} {3}\n'.format(time.ctime(), self.num_characters, 
+                                                        config.MINUTES_OF_TRAINING, accuracy_value))
+
+    def get_log_file_name(self):
+        
+        log_directory = os.path.join(os.path.expanduser('~'),'.morescodetrainer')
+        if not os.path.exists(log_directory):
+            os.makedirs(log_directory)
+        return os.path.join(log_directory,'accuracy_history.txt')
+    
+    def plot_history(self):
+        """
+        Plot training progress as logged
+        """
+        from matplotlib import pyplot as plt
+        
+        log_file_name = self.get_log_file_name()
+        if not os.path.exists(log_file_name):
+            print('No log file to plot')
+            return
+    
+        data = []
+        with open(log_file_name) as log_file:
+            for line in log_file:
+                match = re.search('<(.+?)> (\d+) (\d+) (\S+)',line)
+                if not match:
+                    print('Corrupted log entry: {0}'.format(line))
+                timestamp = datetime.fromtimestamp(time.mktime(time.strptime(match.group(1))))
+                num_chars = int(match.group(2))
+                duration = float(match.group(3))
+                accuracy = float(match.group(4)) 
+                data.append((timestamp, num_chars, duration, accuracy))
+                
+        times, chars, durations, accuracy = zip(*data)
+        
+        transitions = self.get_new_letter_dates(times, chars)
+        
+        fig, ax = plt.subplots()
+        ax.plot_date(times, accuracy, '-o')
+        fig.autofmt_xdate()
+        plt.title('Morse Code learning progress')
+        plt.ylabel('Accuracy (%)')
+        
+        for transition in transitions:
+            plt.axvline(x = transition,c='BLACK')
+        
+        plt.show()
+        
+    def get_new_letter_dates(self, times, chars):
+        """
+        Find dates where we added a new letter
+        """
+        transitions = []
+        max_num_chars = chars[0]
+        for tm, num_chars in zip(times, chars):
+            if num_chars > max_num_chars:
+                transitions.append(tm)
+                max_num_chars = num_chars
+        return transitions
+        
+        
 if __name__ == '__main__':
     trainer = Trainer()
-    trainer.run()
+    trainer.plot_history()
