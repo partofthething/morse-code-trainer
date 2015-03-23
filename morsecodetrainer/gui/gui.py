@@ -66,15 +66,16 @@ class MyFrame(wx.Frame):
         
         self.timer = wx.Timer(self, wx.ID_ANY)
         self.Bind(wx.EVT_TIMER, self.on_timer)
-        self.morse_sound = SoundThread(self)
+        
+        self.trainer = GuiTrainer(self)
         self.timer.Start(1000)    # 1 second interval
 
     def on_plot(self, event):
-        self.morse_sound.trainer.plot_history()
+        self.trainer.plot_history()
 
     def on_timer(self, event):
         if self.morse_sound:
-            self.statusbar.SetStatusText("{0}".format(datetime.timedelta(seconds=self.morse_sound.trainer.elapsed_seconds)), 1)
+            self.statusbar.SetStatusText("{0}".format(datetime.timedelta(seconds=self.trainer.elapsed_seconds)), 1)
 
     def __set_properties(self):
         # begin wxGlade: MyFrame.__set_properties
@@ -126,6 +127,8 @@ class MyFrame(wx.Frame):
         self.morsegrid.ClearGrid()
         for row in range(int(config.MINUTES_OF_TRAINING * WORDS_PER_MINUTE) + 100):
             self.morsegrid.SetCellBackgroundColour(row, 2, wx.WHITE)
+        
+        self.morse_sound = SoundThread(self)
         self.morse_sound.start()
         self.morsegrid.SetCellBackgroundColour(0, 0, wx.GREEN)
         self.morsegrid.ForceRefresh()
@@ -167,24 +170,22 @@ class MyFrame(wx.Frame):
                 
         self.accuracy_value =  correct / float(ai+1) * 100
         self.accuracy.SetLabel('Accuracy: {0:3.0f}%'.format(self.accuracy_value))
-        if self.morse_sound.trainer.full_run_completed:
-            self.morse_sound.trainer.log_results(self.accuracy_value)
+        if self.trainer.full_run_completed:
+            self.trainer.log_results(self.accuracy_value)
             
 
 class SoundThread(threading.Thread):
     def __init__(self, parent):
         threading.Thread.__init__(self)
         self._parent = parent
-        self.trainer = GuiTrainer(parent)
-        
-        
+
     def run(self):
-        self.trainer.set_num_characters(self._parent.level.GetValue())
-        self.trainer.run()
+        self._parent.trainer.set_num_characters(self._parent.level.GetValue())
+        self._parent.trainer.run()
         self.end_training()
         
     def stop(self):
-        self.trainer.stop()
+        self._parent.trainer.stop()
         self.end_training()
         
     def end_training(self):
