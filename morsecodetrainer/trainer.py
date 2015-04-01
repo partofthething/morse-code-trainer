@@ -12,7 +12,7 @@ from morsecodelib import sound
 import config
 
 KOCH_LETTER_ORDER=['K', 'M', 'R', 'S','U','A','P','T','L','O','W','I','.','N','J','E','F','0','Y',
-                   'V','G','5','/','Q','9','Z','H','3','8','B','?','4','2','7','C','1','D','6','X']
+                   'V', 'G', '5', '/','Q','9','Z','H','3','8','B','?','4','2','7','C','1','D','6','X']
 
 class Trainer(object):
     def __init__(self):
@@ -23,6 +23,7 @@ class Trainer(object):
   
     def run(self):
         start = time.time()
+        self.stopped = False
         morse_sound = sound.MorseSoundPlayer()
         self.elapsed_seconds = 0.0
         self.full_run_completed = False
@@ -113,6 +114,8 @@ class Trainer(object):
         
         for transition in transitions:
             plt.axvline(x = transition,c='BLACK')
+            
+        plt.axhline(y=90, c='RED')
         
         plt.show()
         
@@ -122,10 +125,12 @@ class Trainer(object):
         """
         transitions = []
         max_num_chars = chars[0]
+        last_tm = times[0]
         for tm, num_chars in zip(times, chars):
             if num_chars > max_num_chars:
-                transitions.append(tm)
+                transitions.append(last_tm)
                 max_num_chars = num_chars
+            last_tm = tm
         return transitions
         
         

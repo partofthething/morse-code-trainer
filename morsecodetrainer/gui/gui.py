@@ -5,7 +5,6 @@ GUI for Morse Code Trainer
 import threading
 import gettext
 import datetime
-import os
 import time
 
 import wx
@@ -71,14 +70,21 @@ class MyFrame(wx.Frame):
         self.timer.Start(1000)    # 1 second interval
 
     def on_plot(self, event):
+        """
+        plot accuracy vs. time
+        """
         self.trainer.plot_history()
 
     def on_timer(self, event):
+        """
+        update the timer display
+        """
         if self.morse_sound:
-            self.statusbar.SetStatusText("{0}".format(datetime.timedelta(seconds=self.trainer.elapsed_seconds)), 1)
+            self.statusbar.SetStatusText("{0}".format(datetime.timedelta(seconds=
+                                                                         self.trainer.elapsed_seconds)), 1)
 
     def __set_properties(self):
-        # begin wxGlade: MyFrame.__set_properties
+        """initial GUI setup"""
         self.SetTitle("Morse Code Trainer")
         self.accuracy.SetForegroundColour(wx.Colour(0, 255, 0))
         self.accuracy.SetFont(wx.Font(25, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, "Ubuntu"))
@@ -166,7 +172,7 @@ class MyFrame(wx.Frame):
                 self.morsegrid.SetCellValue(ai, 2, 'Yes!')
                 
             else:
-                self.morsegrid.SetCellValue(ai, 2, 'no')
+                self.morsegrid.SetCellValue(ai, 2, 'No')
                 
         self.accuracy_value =  correct / float(ai+1) * 100
         self.accuracy.SetLabel('Accuracy: {0:3.0f}%'.format(self.accuracy_value))
@@ -175,6 +181,9 @@ class MyFrame(wx.Frame):
             
 
 class SoundThread(threading.Thread):
+    """
+    Thread wrapper for sound-producer so it runs nicely with the gui
+    """
     def __init__(self, parent):
         threading.Thread.__init__(self)
         self._parent = parent
@@ -182,6 +191,7 @@ class SoundThread(threading.Thread):
     def run(self):
         self._parent.trainer.set_num_characters(self._parent.level.GetValue())
         self._parent.trainer.run()
+        time.sleep(2) # give user enough time to finish last entry. 
         self.end_training()
         
     def stop(self):
