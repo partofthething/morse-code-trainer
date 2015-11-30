@@ -12,7 +12,7 @@ import wx.grid
 
 from morsecodetrainer.trainer import Trainer
 from morsecodetrainer import config
-from morsecodelib.config import WORDS_PER_MINUTE
+from morsecodelib.config import config as morseConfig
 
 myEVT_NEWWORD = wx.NewEventType()
 EVT_NEWWORD = wx.PyEventBinder(myEVT_NEWWORD, 1)
@@ -38,6 +38,8 @@ class MyFrame(wx.Frame):
         self.accuracy = wx.StaticText(self.panel, wx.ID_ANY, "Accuracy: 0%")
         self.start = wx.Button(self.panel, wx.ID_ANY, "Start Training Session")
         self.stop = wx.Button(self.panel, wx.ID_ANY, "Stop Training Session")
+        self.pause = wx.Button(self.panel, wx.ID_ANY, "Pause")
+        self.reset = wx.Button(self.panel, wx.ID_ANY, "Reset")
         self.morsegrid = wx.grid.Grid(self.panel, wx.ID_ANY, size=(1, 1))
 
         # Menu Bar
@@ -61,17 +63,17 @@ class MyFrame(wx.Frame):
 
         self.Bind(wx.EVT_BUTTON, self.on_start, self.start)
         self.Bind(wx.EVT_BUTTON, self.on_stop, self.stop)
+        self.Bind(wx.EVT_BUTTON, self.on_pause, self.pause)
+        self.Bind(wx.EVT_BUTTON, self.on_reset, self.reset)
         self.Bind(EVT_NEWWORD, self.on_new_word)
         self.Bind(EVT_DONE, self.on_done)
         self.__set_properties()
         self.__do_layout()
         # end wxGlade
-
-        self.timer = wx.Timer(self, wx.ID_ANY)
-        self.Bind(wx.EVT_TIMER, self.on_timer)
-
-
-        self.timer.Start(1000)  # 1 second interval
+        keyID = wx.NewId()
+        self.Bind(wx.EVT_MENU, self.on_start, id=keyID)
+        accel_tbl = wx.AcceleratorTable([(wx.ACCEL_CTRL, ord('S'), keyID)])
+        self.SetAcceleratorTable(accel_tbl)
 
     def on_plot(self, event):
         """
@@ -79,28 +81,21 @@ class MyFrame(wx.Frame):
         """
         self.trainer.plot_history()
 
-    def on_timer(self, event):
-        """
-        update the timer display
-        """
-        if self.morse_sound:
-            self.statusbar.SetStatusText("{0}".format(datetime.timedelta(seconds=
-                                                                         self.trainer.elapsed_seconds)), 1)
-
     def __set_properties(self):
         """initial GUI setup"""
         self.SetTitle("Morse Code Trainer")
         self.accuracy.SetForegroundColour(wx.Colour(0, 255, 0))
         self.accuracy.SetFont(wx.Font(25, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, "Ubuntu"))
-        self.morsegrid.CreateGrid(int(config.MINUTES_OF_TRAINING * WORDS_PER_MINUTE) + 100 , 3)
+        self.morsegrid.CreateGrid(int(config.MINUTES_OF_TRAINING * morseConfig.WORDS_PER_MINUTE) + 100 , 3)
         self.morsegrid.SetColLabelValue(0, "You")
         self.morsegrid.SetColLabelValue(1, "Computer")
         self.morsegrid.SetColLabelValue(2, "Accurate")
         self.statusbar.SetStatusWidths([-1, 100, 100])
         # statusbar fields
-        statusbar_fields = ["Morse Code Trainer", "0:00 / 5:00", "{0} WPM".format(WORDS_PER_MINUTE)]
+        statusbar_fields = ["Morse Code Trainer", "-", "{0} WPM".format(morseConfig.WORDS_PER_MINUTE)]
         for i in range(len(statusbar_fields)):
             self.statusbar.SetStatusText(statusbar_fields[i], i)
+        self.update_clock()
         # end wxGlade
 
     def __do_layout(self):
@@ -111,6 +106,8 @@ class MyFrame(wx.Frame):
         lower_control_sizer = wx.BoxSizer(wx.HORIZONTAL)
         lower_control_sizer.Add(self.start, 0, 0, 0)
         lower_control_sizer.Add(self.stop, 0, 0, 0)
+        lower_control_sizer.Add(self.reset, 0, 0, 0)
+        lower_control_sizer.Add(self.pause, 0, 0, 0)
         upper_control_sizer = wx.GridSizer(2, 2, 2, 2)
         upper_control_sizer.Add(self.level, 0, 0, 0)
         upper_control_sizer.Add(self.level_label, 0, 0, 0)
@@ -134,16 +131,21 @@ class MyFrame(wx.Frame):
 
         Start it in another thread.
         """
+        if not self.trainer.stopped:
+            return
         self.num_words = 0
         self.answers = []
-        self.morsegrid.ClearGrid()
-        for row in range(int(config.MINUTES_OF_TRAINING * WORDS_PER_MINUTE) + 100):
-            self.morsegrid.SetCellBackgroundColour(row, 2, wx.WHITE)
+        self.clear()
 
         self.morse_sound = SoundThread(self)
         self.morse_sound.start()
         self.morsegrid.SetCellBackgroundColour(0, 0, wx.GREEN)
         self.morsegrid.ForceRefresh()
+
+    def clear(self):
+        self.morsegrid.ClearGrid()
+        for row in range(int(config.MINUTES_OF_TRAINING * morseConfig.WORDS_PER_MINUTE) + 100):
+            self.morsegrid.SetCellBackgroundColour(row, 2, wx.WHITE)
 
     def on_stop(self, event):
         """
@@ -152,15 +154,35 @@ class MyFrame(wx.Frame):
         """
         self.morse_sound.stop()
 
+    def on_pause(self, event):
+        self.trainer.paused = not self.trainer.paused
+
+    def on_reset(self, event):
+        """
+        clear the grid.
+        """
+        self.clear()
 
     def on_new_word(self, evt):
+        """
+        Event handler to be called when a new word is finished.
+
+        This basically highlights the next row and appends the correct word to the
+        list of right answers for checking later.
+        """
         new_word = evt.GetValue()
         self.morsegrid.SetCellBackgroundColour(self.num_words, 0, wx.WHITE)
-        self.morsegrid.SetCellBackgroundColour(self.num_words + 1, 0, wx.GREEN)
+        if not self.trainer.stopped:
+            self.morsegrid.SetCellBackgroundColour(self.num_words + 1, 0, wx.GREEN)
         self.morsegrid.ForceRefresh()
         #
         self.num_words += 1
         self.answers.append(new_word)
+        self.update_clock()
+
+    def update_clock(self):
+        minutes, seconds = divmod(self.trainer.elapsed_seconds, 60)
+        self.statusbar.SetStatusText("{0:01d}:{1:02d} / {2}:00".format(int(minutes), int(seconds), config.MINUTES_OF_TRAINING), 1)
 
     def on_done(self, evt):
         """

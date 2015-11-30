@@ -16,7 +16,8 @@ KOCH_LETTER_ORDER = ['K', 'M', 'R', 'S', 'U', 'A', 'P', 'T', 'L', 'O', 'W', 'I',
 
 class Trainer(object):
     def __init__(self):
-        self.stopped = False
+        self.stopped = True
+        self.paused = False
         self.elapsed_seconds = 0.0
         self.num_characters = 2
         self.justlast = 0
@@ -24,6 +25,8 @@ class Trainer(object):
 
     def run(self):
         start = time.time()
+        paused_start_time = None
+        elapsed_paused = 0.0
         self.stopped = False
         morse_sound = sound.MorseSoundPlayer()
         self.elapsed_seconds = 0.0
@@ -32,14 +35,21 @@ class Trainer(object):
         if self.justlast:
             valid_letters = valid_letters[-self.justlast:]
         while self.elapsed_seconds < config.MINUTES_OF_TRAINING * 60.0:
-            length = self.get_length_of_phrase()
-            letters = [random.choice(valid_letters) for _i in range(length)]
-            word = ''.join(letters)
-            morse_sound.text_to_sound(word)
-            self.elapsed_seconds = time.time() - start
-            self.render_correct_answer(word)
             if self.stopped:
                 break
+            if self.paused:
+                if not paused_start_time:
+                    paused_start_time = time.time()
+                time.sleep(0.5)
+                elapsed_paused += time.time() - paused_start_time
+                continue
+            else:
+                paused_start_time = None
+            word = self.make_word(valid_letters)
+            morse_sound.text_to_sound(word)
+            self.elapsed_seconds = time.time() - start - elapsed_paused
+            self.render_correct_answer(word)
+
         else:
             if not self.justlast:
                 # don't log situations when user is just focusing on most recent letters.
@@ -47,7 +57,28 @@ class Trainer(object):
 
         morse_sound.stop()
 
+    def make_word(self, valid_letters):
+        return self.make_random(valid_letters)
+        # return self.make_callsign(valid_letters)
 
+    def make_random(self, valid_letters):
+        length = self.get_length_of_phrase()
+        letters = [random.choice(valid_letters) for _i in range(length)]
+        word = ''.join(letters)
+        return word
+
+    def make_callsign(self, valid_letters):
+        """
+        make a callsign-like word out of the valids
+        """
+        length = random.choice([1, 2])
+        alphas = [ai for ai in valid_letters if re.search('[A-Z]', ai)]
+        numbers = [ai for ai in valid_letters if re.search('[0-9]', ai)]
+        letters = [random.choice(alphas) for _i in range(2)]
+        letters.append(random.choice(numbers))
+        letters.extend([random.choice(alphas) for _i in range(length)])
+        word = ''.join(letters)
+        return word
 
     def get_length_of_phrase(self):
         """
