@@ -9,7 +9,7 @@ import re
 from datetime import datetime
 
 from morsecodelib import sound
-import config
+from . import config
 
 KOCH_LETTER_ORDER = ['K', 'M', 'R', 'S', 'U', 'A', 'P', 'T', 'L', 'O', 'W', 'I', '.', 'N', 'J', 'E', 'F', '0', 'Y',
                    'V', 'G', '5', '/', 'Q', '9', 'Z', 'H', '3', '8', 'B', '?', '4', '2', '7', 'C', '1', 'D', '6', 'X']
@@ -97,7 +97,7 @@ class Trainer(object):
 
     def render_correct_answer(self, word):
         """print out latest correct answer"""
-        print word
+        print(word)
 
     def set_num_characters(self, num_characters):
         self.num_characters = num_characters

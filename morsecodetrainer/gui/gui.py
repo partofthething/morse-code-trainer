@@ -46,15 +46,15 @@ class MyFrame(wx.Frame):
         self.menu = wx.MenuBar()
         self.file = wx.Menu()
         self.settings = wx.MenuItem(self.file, wx.ID_ANY, "Settings", "", wx.ITEM_NORMAL)
-        self.file.AppendItem(self.settings)
+        self.file.Append(self.settings)
         self.plot = wx.MenuItem(self.file, wx.ID_ANY, "Plot history", "", wx.ITEM_NORMAL)
-        self.file.AppendItem(self.plot)
+        self.file.Append(self.plot)
         self.close = wx.MenuItem(self.file, wx.ID_ANY, "Close", "", wx.ITEM_NORMAL)
-        self.file.AppendItem(self.close)
+        self.file.Append(self.close)
         self.menu.Append(self.file, "File")
         self.help = wx.Menu()
         self.about = wx.MenuItem(self.help, wx.ID_ANY, "About", "", wx.ITEM_NORMAL)
-        self.help.AppendItem(self.about)
+        self.help.Append(self.about)
         self.menu.Append(self.help, "Help")
         self.SetMenuBar(self.menu)
         # Menu Bar end
@@ -70,7 +70,7 @@ class MyFrame(wx.Frame):
         self.__set_properties()
         self.__do_layout()
         # end wxGlade
-        keyID = wx.NewId()
+        keyID = wx.ID_ANY
         self.Bind(wx.EVT_MENU, self.on_start, id=keyID)
         accel_tbl = wx.AcceleratorTable([(wx.ACCEL_CTRL, ord('S'), keyID)])
         self.SetAcceleratorTable(accel_tbl)
@@ -262,11 +262,14 @@ class DoneEvent(wx.PyCommandEvent):
     def GetValue(self):
         return self._value
 
-if __name__ == "__main__":
+def run():
     gettext.install("app")  # replace with the appropriate catalog name
-    app = wx.PySimpleApp(0)
+    app = wx.App(0)
     wx.InitAllImageHandlers()
     gui = MyFrame(None, title="Morse Code", size=(700, 600))
     app.SetTopWindow(gui)
     gui.Show()
     app.MainLoop()
+
+if __name__ == "__main__":
+    run()

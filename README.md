@@ -24,10 +24,11 @@ checks your results and prints out your accuracy.
 ## Requirements
 * wxPython for graphics
 * pygame for sound
-* morsecodelib (my little morse code library)
+* [morsecodelib](https://github.com/partofthething/morsecodelib)  (my little morse code library)
 
 ## Use
-Just run clone the repo and run `python gui/gui.py` and the GUI should fire up. 
+Just run clone the repo, install it,  and run `codetrain` and the GUI should fire up. 
+
 Press Start to get going. The answers will not show up until the end of your session 
 (otherwise they distract you). The field that's highlighted in green is the current 
 one to be typing in. 
